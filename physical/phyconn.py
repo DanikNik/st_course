@@ -3,8 +3,9 @@
 
 # import serial.tools.list_ports
 import threading
+import time
+
 import serial as pyserial
-from serial.tools import list_ports_linux
 
 
 # initialization and open the port
@@ -37,10 +38,16 @@ class PhyConn:
         return self.serial.is_open
 
     def write(self, bytestr: bytes):
+        self.serial.flushInput()
+        self.serial.flushOutput()
         return self.serial.write(bytestr)
 
     def recv(self, size: int):
-        return self.serial.read(size)
+        """Function should block returning data until there is mth in buffer"""
+        while True:
+            if self.serial.in_waiting > 0:
+                return self.serial.read(size)
+            time.sleep(0.1)
 
 
 # ser_1 = serial.Serial()

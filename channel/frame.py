@@ -5,10 +5,7 @@
 # xxxxxxxx - data (datalen)
 #
 # If there is no data in frame, then datalen is 0 and data sector of frame is absent
-from textwrap import wrap
 from typing import Union
-
-from bitstring import BitArray
 
 
 def batch(iterable, n=1):
@@ -41,12 +38,21 @@ class Frame:
         TYPE_DATA
     ]
 
+    TYPES_VERBOSE = {
+        TYPE_SYN: 'TYPE_SYN',
+        TYPE_ACK: 'TYPE_ACK',
+        TYPE_FIN: 'TYPE_FIN',
+        TYPE_ERROR: 'TYPE_ERROR',
+        TYPE_DATA: 'TYPE_DATA',
+    }
+
     def __init__(
             self,
             frametype: int,
             data: Union[bytes, str] = None
     ):
         self.frametype = frametype
+        self.frametype_verbose = Frame.TYPES_VERBOSE[frametype]
         self.datalen = len(data) if data is not None else 0
         self.data = bytes(data, 'utf-8') if isinstance(data, str) else data
 
