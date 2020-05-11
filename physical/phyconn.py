@@ -4,6 +4,7 @@
 # import serial.tools.list_ports
 import threading
 import serial as pyserial
+from serial.tools import list_ports_linux
 
 
 # initialization and open the port
@@ -15,11 +16,14 @@ import serial as pyserial
 
 
 class PhyConn:
-    def __init__(self, serial: pyserial.Serial, serial_name: str):
+    def __init__(self, serial: pyserial.Serial = None, serial_name: str = None):
         if serial:
             self.serial = serial
         elif serial_name:
-            self.serial = pyserial.Serial(serial_name, 115200, timeout=1, write_timeout=3)
+            try:
+                self.serial = pyserial.Serial(serial_name, 115200, timeout=1, write_timeout=3)
+            except:
+                raise ValueError('no such serial in system')
         else:
             raise ValueError('no serial provided')
 

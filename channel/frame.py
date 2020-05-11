@@ -33,6 +33,14 @@ class Frame:
     # MISC FRAMETYPES
     TYPE_DATA = 0b0000_1000
 
+    TYPES = [
+        TYPE_SYN,
+        TYPE_ACK,
+        TYPE_FIN,
+        TYPE_ERROR,
+        TYPE_DATA
+    ]
+
     def __init__(
             self,
             frametype: int,

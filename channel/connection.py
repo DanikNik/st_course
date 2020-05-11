@@ -1,5 +1,7 @@
 from typing import Union
 
+from bitstring import BitArray
+
 from channel.frame import Frame
 from physical.phyconn import PhyConn
 
@@ -7,13 +9,29 @@ from physical.phyconn import PhyConn
 class Connection:
     def __init__(self, conn: PhyConn):
         self.conn = conn
-        self.destination = None
 
     def send(self, data: Union[str, bytes]):
-        pass
+        frame = Frame(Frame.TYPE_DATA, data)
+        self.conn.write(frame.bytes())
 
-    def recv(self) -> Union[str, bytes]:
-        pass
+    def recv(self) -> Frame:
+        """This function recieves the full frame and returns it"""
+        # at the beginning framebuffer is empty
+        byte = int.from_bytes(self._recv(), 'big')
+        if byte != Frame.STARTBYTE:
+            raise ValueError
+        frametype = int.from_bytes(self._recv(), 'big')
+        if frametype not in Frame.TYPES:
+            raise ValueError
+        datalen = int.from_bytes(self._recv(), 'big')
+        if datalen > 0:
+            data = self._recv(datalen)
+            return Frame(frametype, data)
+        return Frame(frametype)
+
+    def _recv(self, n=1):
+        """This function recieves one octet"""
+        return self.conn.recv(n)
 
     def open(self, to) -> bool:  # to parameter is unclear
         """Initiate conn establishment"""
@@ -22,8 +40,7 @@ class Connection:
         # send SYN
         self._send_syn()
         # wait for ACK
-        data = self.recv()
-        frame = Frame.from_bytes(data)
+        frame = self.recv()
         return frame.frametype != Frame.TYPE_ACK
         # conn is OK
 
@@ -31,12 +48,12 @@ class Connection:
         """Initiate conn closing"""
         # send FIN
         self._send_fin()
-        frame = Frame.from_bytes(self.recv())
+        frame = self.recv()
         # wait for ACK
         if frame.frametype != Frame.TYPE_ACK:
             raise ValueError
         # wait for FIN now
-        frame = Frame.from_bytes(self.recv())
+        frame = self.recv()
         if frame.frametype != Frame.TYPE_FIN:
             raise ValueError
         # send ACK
