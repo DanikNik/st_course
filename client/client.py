@@ -31,7 +31,8 @@ class Client:
 
     def register(self):
         for conn in self.connections:
-            conn.open()
+            if not conn.is_open:
+                conn.open()
         #     frame = conn.recv()  # to handle ack
         #     # possible error handling here
         #     if conn.is_open:
@@ -56,7 +57,7 @@ class Client:
                 frame = conn.recv()
                 if frame is not None:
                     print(f'[{threading.get_ident()}] NEW FRAME')
-                    self.frame_queue.put(frame)
+                    self.frame_queue.put_nowait(frame)
             else:
                 print(f'[{threading.get_ident()}] ENDED RECEIVING')
                 return
@@ -72,7 +73,7 @@ class Client:
     def stop(self):
         self.should_stop.set()
         for worker in self.readers:
-            worker.join(1)
+            worker.join()
 
     def send(self, data: Union[str, bytes], dst: int):
         print(f'[{threading.get_ident()}] CLIENT.SEND CALLED')
@@ -80,4 +81,4 @@ class Client:
             conn.send(data, dst)
 
     def read(self):
-        self.frame_queue.get()
+        return self.frame_queue.get()

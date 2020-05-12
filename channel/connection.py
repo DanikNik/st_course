@@ -32,15 +32,47 @@ class Connection:
         if not self.is_open:
             raise ConnectionClosedError
         frame = Frame(Frame.TYPE_DATA, data, self.src, dst)
-        print(f'[{threading.get_ident()}] FRAME DATA: {frame.dst}{frame.data}')
-        self.conn.write(frame.bytes())
+        print(f'[{threading.get_ident()}] FRAME DATA: {frame.dst} {frame.data}')
+        try:
+            framebytes = frame.bytes()
+        except Exception as e:
+            return
+        self.conn.write(framebytes)
         self.waiting_data_ack = True
 
+    def recv(self) -> Union[Frame, None]:
+        """This function recieves the full frame and returns it"""
+        # at the beginning "framebuffer" is empty
+        print(f'[{threading.get_ident()}] CONNECTION.RECV CALLED')
+        byte = int.from_bytes(self._recv(), 'big')
+        if byte != Frame.STARTBYTE:
+            raise ValueError
+        frametype = int.from_bytes(self._recv(), 'big')
+        if frametype not in Frame.TYPES:
+            raise ValueError
+        src = int.from_bytes(self._recv(), 'big')
+        dst = int.from_bytes(self._recv(), 'big')
+        datalen = int.from_bytes(self._recv(), 'big')
+        if datalen > 0:
+            data = self._recv(datalen)
+            frame = Frame(frametype, data, src, dst)
+        else:
+            frame = Frame(frametype, src=src, dst=dst)
+        print(f'[{threading.get_ident()}] RECEIVED {wrap(BitArray(frame.bytes()).bin, 8)}')
+        drop_frame = self.handle_frame(frame)
+        print(f'[{threading.get_ident()}] CONNECTION.RECV ENDED')
+        if drop_frame:
+            return None
+        return frame
+
     def handle_frame(self, frame: Frame):
+        print(f'[{threading.get_ident()}] HANDLING INCOME FRAME')
+
         # here we are handling handshake conditions
         # actually, this part is about handling responses
         if self.waiting_open:
             if frame.frametype == Frame.TYPE_ACK:
+                self.dst = frame.src
                 self.is_open = True
                 self.waiting_open = False
                 print(f'[{threading.get_ident()}] INITED CONNECTION')
@@ -75,7 +107,7 @@ class Connection:
             return True
 
         # if it is a data frame we send ACK frame
-        if frame.frametype == Frame.TYPE_DATA:
+        elif frame.frametype == Frame.TYPE_DATA:
             if frame.dst == self.src or frame.dst == Frame.BROADCAST:
                 self._send_ack()
                 return False
@@ -96,29 +128,6 @@ class Connection:
                 self.is_open = True
                 print(f'[{threading.get_ident()}] OPENED CONNECTION WITH {frame.src}')
                 return True
-
-    def recv(self) -> Union[Frame, None]:
-        """This function recieves the full frame and returns it"""
-        # at the beginning "framebuffer" is empty
-        byte = int.from_bytes(self._recv(), 'big')
-        if byte != Frame.STARTBYTE:
-            raise ValueError
-        frametype = int.from_bytes(self._recv(), 'big')
-        if frametype not in Frame.TYPES:
-            raise ValueError
-        src = int.from_bytes(self._recv(), 'big')
-        dst = int.from_bytes(self._recv(), 'big')
-        datalen = int.from_bytes(self._recv(), 'big')
-        if datalen > 0:
-            data = self._recv(datalen)
-            frame = Frame(frametype, data, src, dst)
-        else:
-            frame = Frame(frametype, src=src, dst=dst)
-        print(f'[{threading.get_ident()}] RECEIVED {wrap(BitArray(frame.bytes()).bin, 8)}')
-        drop_frame = self.handle_frame(frame)
-        if drop_frame:
-            return None
-        return frame
 
     def _recv(self, n=1):
         """This function recieves one octet"""
