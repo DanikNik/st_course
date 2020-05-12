@@ -2,20 +2,9 @@
 
 
 # import serial.tools.list_ports
-import threading
 import time
-from textwrap import wrap
 
 import serial as pyserial
-
-
-# initialization and open the port
-
-# possible timeout values:
-#    1. None: wait forever, block call
-#    2. 0: non-blocking mode, return immediately
-#    3. x, x is bigger than 0, float allowed, timeout block call
-from bitstring import BitArray
 
 
 class PhyConn:
@@ -24,11 +13,13 @@ class PhyConn:
             self.serial = serial
         elif serial_name:
             try:
-                self.serial = pyserial.Serial(serial_name, 115200, timeout=0.5, write_timeout=0.5)
+                self.serial = pyserial.Serial(
+                    serial_name, 115200, timeout=0.5, write_timeout=0.5
+                )
             except:
-                raise ValueError('no such serial in system')
+                raise ValueError("no such serial in system")
         else:
-            raise ValueError('no serial provided')
+            raise ValueError("no serial provided")
 
     def open(self):
         self.serial.open()
@@ -42,19 +33,19 @@ class PhyConn:
     def write(self, bytestr: bytes):
         # self.serial.flushInput()
         # self.serial.flushOutput()
-        print(f'[{threading.get_ident()}] PHYCONN.WRITE CALLED')
+        # print(f'[{threading.get_ident()}] PHYCONN.WRITE CALLED')
         n = self.serial.write(bytestr)
-        print(f'[{threading.get_ident()}] PHYCONN.WRITE ENDED')
+        # print(f'[{threading.get_ident()}] PHYCONN.WRITE ENDED')
         return n
 
     def recv(self, size: int):
         """Function should block returning data until there is smth in buffer"""
-        print(f'[{threading.get_ident()}] PHYCONN.RECV CALLED')
+        # print(f'[{threading.get_ident()}] PHYCONN.RECV CALLED')
         while True:
             if self.serial.in_waiting > 0:
-                print(f'[{threading.get_ident()}] PHYCONN.RECV NEW DATA')
+                # print(f'[{threading.get_ident()}] PHYCONN.RECV NEW DATA')
                 data = self.serial.read(size)
-                print(f'[{threading.get_ident()}] PHYCONN.RECV ENDED')
+                # print(f'[{threading.get_ident()}] PHYCONN.RECV ENDED')
                 return data
             time.sleep(0.1)
         # data = self.serial.read(size)
