@@ -1,33 +1,36 @@
 # Frame sructure
-# 11111111 - startbyte
-# xxxxxxxx - frametype
-# xxxxxxxx - datalen (in bytes)
-# xxxxxxxx - data (datalen)
+# 11111111 - startbyte - 1 octet
+# xxxxxxxx - frametype - 1 octet
+# xxxxxxxx - src - 1 octet (integer number from 1 to 3 actually, but can be anything up to 1 byte)
+# xxxxxxxx - dst - 1 octet (integer number from 1 to 3 actually, but can be anything up to 1 byte)
+# xxxxxxxx - datalen - 1 octet (in bytes)
+# xxxxxxxx - data - $datalen octets (datalen)
 #
 # If there is no data in frame, then datalen is 0 and data sector of frame is absent
+#
+# Broadcast address is equivalent to 11111111 (like in TCP/IP)
+#
+#
+#
 from typing import Union
-
-
-def batch(iterable, n=1):
-    l = len(iterable)
-    for ndx in range(0, l, n):
-        yield iterable[ndx:min(ndx + n, l)]
 
 
 class Frame:
     STARTBYTE = 0b1111_1111
+    BROADCAST = 0b1111_1111
 
     # ARP-LIKE FRAMETYPES
-    TYPE_GREET = 0b1000_0000
-    TYPE_GREET_RESP = 0b1100_0000
+    TYPE_REG = 0b1000_0000  # to register node in network
 
     # CONNECTION MANAGEMENT FRAMETYPES
-    TYPE_SYN = 0b0000_0001
-    TYPE_FIN = 0b0000_0010
+    TYPE_SYN = 0b0000_0001  # open connection
+    TYPE_FIN = 0b0000_0010  # close connection
+
     # APPROVEMENT FRAMETYPES
-    TYPE_ACK = 0b0000_0100
-    TYPE_ERROR = 0b0000_0101
-    # MISC FRAMETYPES
+    TYPE_ACK = 0b0000_0100  # OK
+    TYPE_ERROR = 0b0000_0101  # !OK
+
+    # DATA FRAMETYPE
     TYPE_DATA = 0b0000_1000
 
     TYPES = [
@@ -49,15 +52,19 @@ class Frame:
     def __init__(
             self,
             frametype: int,
-            data: Union[bytes, str] = None
+            data: Union[bytes, str] = None,
+            src: int = None,
+            dst: int = None,
     ):
         self.frametype = frametype
         self.frametype_verbose = Frame.TYPES_VERBOSE[frametype]
+        self.src = src
+        self.dst = dst
         self.datalen = len(data) if data is not None else 0
         self.data = bytes(data, 'utf-8') if isinstance(data, str) else data
 
     def bytes(self):
-        framebytes = bytes([self.STARTBYTE, self.frametype, self.datalen])
+        framebytes = bytes([self.STARTBYTE, self.frametype, self.src, self.dst, self.datalen])
         if self.datalen != 0:
             framebytes += self.data
         return framebytes
@@ -68,9 +75,11 @@ class Frame:
         if startbyte != Frame.STARTBYTE:
             raise ValueError('startbyte is not a startbyte:)')
         frametype = data[1]
-        datalen = data[2]
+        src = data[2]
+        dst = data[3]
+        datalen = data[4]
         if datalen > 0:
-            body = data[3:]
-            return cls(frametype, body)
+            body = data[5:]
+            return cls(frametype, body, src, dst)
         else:
-            return cls(frametype)
+            return cls(frametype, src=src, dst=dst)

@@ -4,6 +4,7 @@
 # import serial.tools.list_ports
 import threading
 import time
+from textwrap import wrap
 
 import serial as pyserial
 
@@ -14,6 +15,7 @@ import serial as pyserial
 #    1. None: wait forever, block call
 #    2. 0: non-blocking mode, return immediately
 #    3. x, x is bigger than 0, float allowed, timeout block call
+from bitstring import BitArray
 
 
 class PhyConn:
@@ -22,7 +24,7 @@ class PhyConn:
             self.serial = serial
         elif serial_name:
             try:
-                self.serial = pyserial.Serial(serial_name, 115200, timeout=1, write_timeout=3)
+                self.serial = pyserial.Serial(serial_name, 115200, write_timeout=3)
             except:
                 raise ValueError('no such serial in system')
         else:
@@ -43,10 +45,11 @@ class PhyConn:
         return self.serial.write(bytestr)
 
     def recv(self, size: int):
-        """Function should block returning data until there is mth in buffer"""
+        """Function should block returning data until there is smth in buffer"""
         while True:
             if self.serial.in_waiting > 0:
-                return self.serial.read(size)
+                data = self.serial.read(size)
+                return data
             time.sleep(0.1)
 
 

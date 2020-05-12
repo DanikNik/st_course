@@ -2,40 +2,35 @@
 
 import sys
 import threading
-from textwrap import wrap
 
-from bitstring import BitArray
-
-from channel.connection import Connection
-from physical.phyconn import PhyConn
+from client.client import Client
 
 
-def reading_func(c: Connection):
+def reading_func(c: Client):
     while True:
-        frame = c.recv()
+        frame = c.read()
         if frame.frametype == frame.TYPE_DATA:
-            framebits = BitArray(frame.bytes())
-            print('CAPTURED', wrap(framebits.bin, 8))
+            print(f'[{threading.get_ident()}] CAPTURED: {frame.data}')
 
 
 if __name__ == '__main__':
-    print('START')
-    com = input('COM: ')
-    conn = Connection(PhyConn(serial_name=com))
-    reader = threading.Thread(target=reading_func, args=[conn])
-    reader.start()
+    com1 = sys.argv[1]
+    com2 = sys.argv[2]
+    address = int(sys.argv[3])
+    print(f'COM PORTS ARE {com1} and {com2}')
+    print(f'ADDRESS IS {address}')
+    client = Client(address, com1, com2)
+    client.run()
+    input()
+    client.register()
+    print('SUCCESSFULLY REGISTERED')
+    reader = threading.Thread(target=reading_func, args=[client])
     try:
+        reader.start()
         while True:
-            data = str(input())
-            if data == 'OPEN':
-                conn.open()
-            elif data == 'CLOSE':
-                conn.close()
-            elif data == 'SYN':
-                conn._send_syn()
-            elif data == 'FIN':
-                conn._send_ack()
-            else:
-                conn.send(data)
-    except Exception:
-        reader.join(0.1)
+            dst, data = str(input()).split(' ')
+            print("GOT DATA AND ADDR")
+            client.send(data, dst)
+    except:
+        client.stop()
+        reader.join()
