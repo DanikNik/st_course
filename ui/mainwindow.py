@@ -6,6 +6,7 @@ import threading
 from PyQt5 import QtGui, QtCore, QtWidgets
 
 from client.client import Client
+from ui import info_dialog
 from ui.components import window
 from ui.connect_dialog import ConnectDialog
 from ui.listener import listener
@@ -36,7 +37,12 @@ class ChatApp(window.Ui_MainWindow, QtWidgets.QMainWindow):
         self.mExit.triggered.connect(self.close_connection)
         self.mSetting.triggered.connect(self.apply_settings)
         self.mConnect.triggered.connect(self.establish_connections)
-        # self.mInfo.triggered.connect(self.create_dialog)
+        self.mInfo.triggered.connect(self.create_dialog)
+
+    def create_dialog(self):
+        if not self.infoDialog:
+            self.infoDialog = info_dialog.InfoDialog()
+        self.infoDialog.show()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         self.stop()

@@ -109,16 +109,16 @@ class Connection:
 
         # this part is about handling requests from remote nodes
         # here we handle registering new node in network
-        if frame.frametype == Frame.TYPE_REG:
-            if self.src == frame.src:
-                self._send_err()
-            else:
-                self.dst = frame.src
-                self._send_ack()
-            return True
+        # if frame.frametype == Frame.TYPE_REG:
+        #     if self.src == frame.src:
+        #         self._send_err()
+        #     else:
+        #         self.dst = frame.src
+        #         self._send_ack()
+        #     return True
 
         # if it is a data frame we send ACK frame...
-        elif frame.frametype == Frame.TYPE_DATA:
+        if frame.frametype == Frame.TYPE_DATA:
             if frame.dst == self.src or frame.dst == Frame.BROADCAST:
                 # ...only if it is sent to us or broadcast
                 self._send_ack()
