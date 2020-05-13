@@ -7,6 +7,7 @@ from bitstring import BitArray
 from channel.frame import Frame
 from channel.hamming import Hamming
 from physical.phyconn import PhyConn
+from ui.listener import listener
 
 
 class ConnectionClosedError(ValueError):
@@ -14,7 +15,10 @@ class ConnectionClosedError(ValueError):
 
 
 class Connection:
-    def __init__(self, conn: PhyConn, src: int = 0, dst: int = 0):
+    def __init__(
+        self, should_stop: threading.Event, conn: PhyConn, src: int = 0, dst: int = 0
+    ):
+        self.should_stop = should_stop
         self.src = src
         self.dst = dst
         self.conn = conn
@@ -77,6 +81,7 @@ class Connection:
                 self.dst = frame.src
                 self.is_open = True
                 self.waiting_open = False
+                listener.line_recieved(f"[{frame.src}] INITED CONNECTION", frame.src)
                 print(f"[{frame.src}] INITED CONNECTION")
                 return True
             raise ValueError("open")
@@ -84,6 +89,7 @@ class Connection:
             if frame.frametype == Frame.TYPE_ACK:
                 self.is_open = False
                 self.waiting_close = False
+                listener.line_recieved(f"[{frame.src}] CLOSED CONNECTION", frame.src)
                 return True
             raise ValueError("close")
         elif self.waiting_data_ack:
@@ -127,6 +133,7 @@ class Connection:
             if frame.frametype == Frame.TYPE_FIN:
                 self._send_ack()
                 self.is_open = False
+                listener.line_recieved(f"[{frame.src}] CLOSED CONNECTION", frame.src)
                 return True
         else:
             # if conn is not open, we need to handle SYN frames to open it
@@ -134,6 +141,7 @@ class Connection:
                 self.dst = frame.src
                 self._send_ack()
                 self.is_open = True
+                listener.line_recieved(f"[{frame.src}] OPENED CONNECTION", frame.src)
                 print(f"[{frame.src}] OPENED CONNECTION")
                 return True
 
@@ -155,12 +163,12 @@ class Connection:
         # wait for ACK
         self.waiting_close = True
 
-    def register(self):
-        """Register node in network"""
-        # send REG
-        self._send_reg()
-        # wait for ACK
-        self.waiting_reg = True
+    # def register(self):
+    #     """Register node in network"""
+    #     # send REG
+    #     self._send_reg()
+    #     # wait for ACK
+    #     self.waiting_reg = True
 
     def _send_service_frame(self, frametype: int):
         syn_frame = Frame(frametype, src=self.src, dst=self.dst)
@@ -172,8 +180,9 @@ class Connection:
 
     def _send_ack(self):
         self._send_service_frame(Frame.TYPE_ACK)
+
     def _send_nack(self):
-            self._send_service_frame(Frame.TYPE_NACK)
+        self._send_service_frame(Frame.TYPE_NACK)
 
     def _send_fin(self):
         self._send_service_frame(Frame.TYPE_FIN)

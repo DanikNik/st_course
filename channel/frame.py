@@ -54,11 +54,11 @@ class Frame:
     }
 
     def __init__(
-            self,
-            frametype: int,
-            data: Union[bytes, str] = None,
-            src: int = None,
-            dst: int = None,
+        self,
+        frametype: int,
+        data: Union[bytes, str] = None,
+        src: int = None,
+        dst: int = None,
     ):
         self.frametype = frametype
         self.frametype_verbose = Frame.TYPES_VERBOSE[frametype]
